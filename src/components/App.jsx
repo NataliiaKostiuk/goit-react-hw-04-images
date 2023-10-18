@@ -1,4 +1,4 @@
-import { Component } from "react";
+import { useEffect, useState } from "react";
 import { SearchBar } from "./searchBar/searchBar";
 import { fetchImages } from './fetchAPI';
 import { ImageGallery } from './imageGallery/imageGallery';
@@ -8,98 +8,92 @@ import toast, { Toaster } from 'react-hot-toast';
 import { ModalWindow } from './modal/modal';
 
 
-export class App extends Component {
-  state = {
-    query: '',
-    page: 42,
-    images: [],
-    loading: false,
-    error: false,
-    totalPage: 0,
-    isModalOpen: false,
-    largeImageUrl: null,
-    tags:null,
-   
-  };
-  handleSubmit = value => {
-        this.setState({query: value });
-     if (this.state.query === value) {
-       return;
-     } else {
-       this.setState({
-         images: [],
-         page:1,
-       })
-     }
-    }
-   
- handleLoadMore = () => {
-   this.setState(prevState => ({
-    page: prevState.page + 1,
-   }));
-  };
+export const App = () => {
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  // eslint-disable-next-line 
+  const [error, setError] = useState(false);
+  const [totalPage, setTotalPage] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [largeImageUrl, setLargeImageUrl] = useState(null);
+  const [tags, setTags] = useState(null);
 
- async componentDidUpdate(_, prevState) {  
-    if (
-      prevState.query !== this.state.query ||
-      prevState.page !== this.state.page
-    ) {
-      
-    try {
-     this.setState({ loading: true, error: false });
-     const data = await fetchImages(this.state.query, this.state.page);
-     toast.success('Successfully created!');
-     this.setState(prev => (
-      {images: [...prev.images, ...data.hits],
-       totalPage: (Math.ceil(data.totalHits / 12)),
-          }
-        ));
-      } catch (error) {
-        toast.error('This is an error!');
-      } finally {
-      this.setState({ loading: false });
-     }
+
+
+  useEffect(() => {
+      async function getImages() {
+        if (
+          query === ''
+        ) {
+          return;
+        }
+        try {
+          setError(false);
+          setLoading(true);
+          const data = await fetchImages(query, page);
+          toast.success('Successfully created!');
+          setImages(prevState => [...prevState, ...data.hits]);
+          setTotalPage(Math.ceil(data.totalHits / 12));
+        } catch (error) {
+          toast.error(`This is an error!`);
+        } finally {
+          setLoading(false);
+        }
+      }
+      getImages()
+    
+}, [query, page])
+
+ const handleSubmit = value => {
+    setQuery(value);
+    if (query === value) {
+      return;
+    } else {
+      setImages([]);
+      setPage(1)
     }
   }
-
-   onSelectedImg = (largeImageUrl, tags) => {
-    this.setState({
-      largeImageUrl: largeImageUrl,
-      tags: tags,
-    });
+  const handleLoadMore = () => {
+    setPage(prevState => prevState + 1);
+  };
+  
+  const onSelectedImg = (largeImageUrl, tags) => {
+    setLargeImageUrl(largeImageUrl);
+    setTags(tags);
   };
 
-  openModal = () => {
-    this.setState({ isModalOpen: true });
+  const openModal = () => {
+    setIsModalOpen(true)
   };
 
-  closeModal = () => {
-    this.setState({
-      isModalOpen: false,
-      largeImageUrl: null,
-      tags:null,
-    });
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setLargeImageUrl(null);
+    setTags(null);
   };
- 
-  render() {
-    console.log(this.state);
-    return (
-      <div>
-        <SearchBar handleSubmit={this.handleSubmit} />
-        {this.state.images.length > 0 &&
-          (<ImageGallery images={this.state.images}
-            onSelectedImg={this.onSelectedImg}
-        openModal={this.openModal}  />)}
-        <Toaster/>
-        {this.state.loading && <Loader />}
-        {this.state.images.length > 0 && this.state.page !== this.state.totalPage &&
-          (<LoadMoreBtn onClick={this.handleLoadMore} />)} 
-        {this.state.largeImageUrl !== null && (<ModalWindow isModalOpen={this.state.isModalOpen}
-          closeModal={this.closeModal}
-          largeImageUrl={this.state.largeImageUrl}
-          tags={this.state.tags}
-        />)}
-      </div>
-    );
-  }
+ console.log(page);
+  return (
+    <div>
+      <SearchBar handleSubmit={handleSubmit} />
+        {images.length > 0 &&  (<ImageGallery images={images}
+          onSelectedImg={onSelectedImg}
+          openModal={openModal} />)}
+      <Toaster />
+      {loading && <Loader />}
+      {images.length > 0 && page !== totalPage &&
+        (<LoadMoreBtn onClick={handleLoadMore} />)}
+      {largeImageUrl !== null && (<ModalWindow isModalOpen={isModalOpen}
+        closeModal={closeModal}
+        largeImageUrl={largeImageUrl}
+        tags={tags}
+      />)}
+    </div>
+  );
 }
+
+
+
+
+
